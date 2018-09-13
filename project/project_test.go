@@ -1,6 +1,7 @@
 package project_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/apex/apex/project"
@@ -92,6 +93,18 @@ func TestProject_LoadFunctionByPath_mergeEnvWithFunctionEnv(t *testing.T) {
 	assert.NoError(t, p.LoadFunctions("foo"), "load")
 
 	assert.Equal(t, map[string]string{"PROJECT_ENV": "projectEnv", "FUNCTION_ENV": "functionEnv", "APEX_FUNCTION_NAME": "foo", "LAMBDA_FUNCTION_NAME": "envMerge_foo"}, p.Functions[0].Environment)
+}
+
+func TestProject_LoadFunctionByPath_envVarWithFunctionEnv(t *testing.T) {
+	os.Setenv("TEST_ROLE", "not a real role")
+	p := &project.Project{
+		Path: "_fixtures/envVars",
+		Log:  log.Log,
+	}
+
+	assert.NoError(t, p.Open(), "open")
+	assert.NoError(t, p.LoadFunctions("foo"), "load")
+	assert.Equal(t, p.Config.Role, "not a real role")
 }
 
 func TestProject_LoadFunctionByPath_overrideVpcWithFunctionVpc(t *testing.T) {

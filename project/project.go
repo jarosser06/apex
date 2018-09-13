@@ -58,6 +58,10 @@ type Config struct {
 	Zip                string            `json:"zip"`
 }
 
+func EnvVar(envVar string) string {
+	return os.Getenv(envVar)
+}
+
 // Project represents zero or more Lambda functions.
 type Project struct {
 	Config
@@ -105,12 +109,25 @@ func (p *Project) Open() error {
 		configFile = fmt.Sprintf("project.%s.json", p.Environment)
 	}
 
-	f, err := os.Open(filepath.Join(p.Path, configFile))
+	confContent, err := ioutil.ReadFile(filepath.Join(p.Path, configFile))
 	if err != nil {
 		return err
 	}
 
-	if err := json.NewDecoder(f).Decode(&p.Config); err != nil {
+	funcMap := template.FuncMap{
+		"EnvVar": os.Getenv,
+	}
+	confTemplate, err := template.New("configTemplate").Funcs(funcMap).Parse(string(confContent))
+	if err != nil {
+		return err
+	}
+
+	var renderedConfig bytes.Buffer
+	if err := confTemplate.Execute(&renderedConfig, nil); err != nil {
+		return err
+	}
+
+	if err = json.NewDecoder(&renderedConfig).Decode(&p.Config); err != nil {
 		return err
 	}
 
